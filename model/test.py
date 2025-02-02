@@ -17,7 +17,9 @@ if __name__ == "__main__":
     model = deeplabv3_resnet101(weights=None)
     model.classifier[4] = torch.nn.Conv2d(256,2, kernel_size=(1,1))
 
-    model.load_state_dict(torch.load("../agaid2025_final.pth"))
+    checkpoint = torch.load("./agaid2025_final.pth", map_location=device)
+    model.load_state_dict(checkpoint, strict=False)
+
     model.to(device)
     model.eval()
         
