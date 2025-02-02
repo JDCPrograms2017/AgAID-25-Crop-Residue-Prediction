@@ -26,4 +26,5 @@ if __name__ == "__main__":
 
         with torch.no_grad():
             outputs = model(images)["out"] # Get the output Tensor!
+            predicted_mask = torch.argmax(outputs, dim=1)
 
