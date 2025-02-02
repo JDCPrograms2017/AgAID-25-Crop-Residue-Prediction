@@ -106,7 +106,10 @@ class CropResidueSegDataset(Dataset):
 
         # If a transform is defined for the dataset.
         if transform:
-            image = transform(image)
+            if not self.training:
+                image = transform(image).unsqueeze(0) # We need a 4D Tensor output for eval.
+            else:
+                image = transform(image)
 
         mask = None
         if self.training:
