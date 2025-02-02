@@ -40,7 +40,10 @@ def train_model(model, dataloader, epochs=10):
         print(f"Epoch {epoch+1}/{epochs}, Loss: {avg_loss:.4f}")
 
         # Save model checkpoint
-        torch.save(model.state_dict(), f"../outputs/checkpoints/deeplab_epoch{epoch+1}.pth")
+        torch.save(model.state_dict(), f"../outputs/checkpoints/agaid2025_epoch{epoch+1}.pth")
+
+    # Save the final instance of the trained model to an outputs folder specific to finished trainings.
+    torch.save(model.state_dict(), f"../outputs/final/agaid2025_finished_model.pth")
 
 
 if __name__ == '__main__':
