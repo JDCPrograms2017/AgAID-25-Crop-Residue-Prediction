@@ -68,6 +68,11 @@ class CropResidueSegDataset(Dataset):
                     image_files = sorted([file for file in os.listdir(image_folder_path) if file.endswith('.jpg')])
 
                     for file in image_files:
+                        
+                        # We don't want to go over these image files as we've already located them.
+                        if file.endswith(".tif"):
+                            break
+
                         image_path = os.path.join(image_folder_path, file) # Result should be <root_path>/<dataset_name>/IMG_0629/IMG_0629_part01.jpg for example
 
                         # Identify corresponding .tif file
