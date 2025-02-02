@@ -46,7 +46,7 @@ def get_img_transform(image_dir_path):
 
 # Creating a class for this specific problem that inherits from Dataset so that we can use DataLoader on it in training.
 class CropResidueSegDataset(Dataset):
-    def __init__(self, root_directory, training=True):
+    def __init__(self, root_directory, training):
         self.training = training
         self.root_dir = root_directory
         self.img_mask_pairs = self._load_img_mask_groups()
