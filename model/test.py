@@ -23,7 +23,7 @@ if __name__ == "__main__":
     model.to(device)
     model.eval()
         
-    for images, _ in dataset_loader:
+    for images in dataset_loader:
         images = images.to(device)
 
         with torch.no_grad():

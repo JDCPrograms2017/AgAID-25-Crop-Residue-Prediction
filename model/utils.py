@@ -75,7 +75,7 @@ class CropResidueSegDataset(Dataset):
                     image_path = os.path.join(image_folder_path, file) # Result should be <root_path>/<dataset_name>/IMG_0629/IMG_0629_part01.jpg for example
 
                     # Identify corresponding .tif file
-                    if self.training:
+                    if self.training == True:
                         mask_path = file.replace("_part", "_res_part", 1) # Should now be "IMG_0629_res_part0.jpg" for example
                         mask_path = mask_path.replace(".jpg", ".tif")
                         mask_path = os.path.join(image_folder_path, mask_path)
@@ -99,19 +99,23 @@ class CropResidueSegDataset(Dataset):
         if not os.path.exists(img_path):
             print(f"Image file not found: {img_path}")
 
-        if not os.path.exists(mask_path):
+        if self.training and not os.path.exists(mask_path):
             print(f"Image file not found: {mask_path}")
 
         image = Image.open(img_path).convert("RGB")
-        mask = Image.open(mask_path).convert("L")
 
         # If a transform is defined for the dataset.
         if transform:
             image = transform(image)
 
-        mask = transforms.ToTensor()(mask).long() # Convert the mask to a Tensor [0, 1]; Squeezes the 4D tensor into a 3D tensor (removes the 1 channel dimension)
-        # print(f"Image Tensor: {image}\tMask Tensor: {mask}")
+        mask = None
+        if self.training:
+            mask = Image.open(mask_path).convert("L")
+            mask = transforms.ToTensor()(mask).long() # Convert the mask to a Tensor [0, 1]; Squeezes the 4D tensor into a 3D tensor (removes the 1 channel dimension)
+            # print(f"Image Tensor: {image}\tMask Tensor: {mask}")
+            return image, mask # Return the Tensors
 
-        return image, mask # Return the Tensors
+
+        return image # Return the Tensor
 
 
