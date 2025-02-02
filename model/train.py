@@ -3,35 +3,18 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from torchvision.models.segmentation import deeplabv3_resnet101
-import albumentations as A
-from albumentations.pytorch import ToTensorV2
-import os
-from dataset import CropResidueDataset
+from utils import CropResidueSegDataset
+import multiprocessing
 
 # Set device (GPU if available)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# Data paths
-train_image_dir = "../data/train/images"
-train_mask_dir = "../data/train/masks"
-val_image_dir = "../data/val/images"
-val_mask_dir = "../data/val/masks"
+img_data_path = "../images_512/label/residue_background"
 
-# Data Augmentation
-transform = A.Compose([
-    A.Resize(512, 512),
-    A.HorizontalFlip(p=0.5),
-    A.RandomBrightnessContrast(p=0.2),
-    A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
-    ToTensorV2()
-])
+dataset = CropResidueSegDataset(img_data_path)
 
-# Load dataset
-train_dataset = CropResidueDataset(train_image_dir, train_mask_dir, transform)
-val_dataset = CropResidueDataset(val_image_dir, val_mask_dir, transform)
-
-train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True, num_workers=2)
-val_loader = DataLoader(val_dataset, batch_size=4, shuffle=False, num_workers=2)
+desired_workers = max(1, multiprocessing.cpu_count() - 1)
+dataset_loader = DataLoader(dataset, batch_size=16, shuffle=True, num_workers=4)
 
 # Load DeepLabV3 model
 model = deeplabv3_resnet101(pretrained=True)
@@ -43,14 +26,12 @@ criterion = nn.CrossEntropyLoss()
 optimizer = optim.AdamW(model.parameters(), lr=1e-4, weight_decay=1e-4)
 
 # Training function
-def train_model(model, train_loader, val_loader, epochs=10):
-    best_val_loss = float("inf")
-
+def train_model(model, dataloader, epochs=10):
     for epoch in range(epochs):
         model.train()
         total_loss = 0
 
-        for images, masks in train_loader:
+        for images, masks in dataloader:
             images, masks = images.to(device), masks.to(device)
             optimizer.zero_grad()
 
@@ -61,11 +42,11 @@ def train_model(model, train_loader, val_loader, epochs=10):
 
             total_loss += loss.item()
 
-        avg_loss = total_loss / len(train_loader)
+        avg_loss = total_loss / len(dataloader)
         print(f"Epoch {epoch+1}/{epochs}, Loss: {avg_loss:.4f}")
 
         # Save model checkpoint
         torch.save(model.state_dict(), f"../outputs/checkpoints/deeplab_epoch{epoch+1}.pth")
 
 # Train the model
-train_model(model, train_loader, val_loader, epochs=10)
+train_model(model, dataset_loader, epochs=10)
