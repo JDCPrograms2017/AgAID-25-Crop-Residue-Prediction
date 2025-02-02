@@ -68,7 +68,7 @@ if __name__ == '__main__':
     path_vars = ["images_512", "label", "residue_background"]
     img_data_path = os.path.join(path_vars[0], path_vars[1], path_vars[2]) # A more OS-independent way to make the path.
 
-    dataset = CropResidueSegDataset(img_data_path)
+    dataset = CropResidueSegDataset(img_data_path, True)
     print(f"Dataset loaded! Size: {len(dataset)}")
 
     dataset_loader = DataLoader(dataset, batch_size=16, shuffle=True, num_workers=4)

@@ -46,7 +46,8 @@ def get_img_transform(image_dir_path):
 
 # Creating a class for this specific problem that inherits from Dataset so that we can use DataLoader on it in training.
 class CropResidueSegDataset(Dataset):
-    def __init__(self, root_directory):
+    def __init__(self, root_directory, training=True):
+        self.training = training
         self.root_dir = root_directory
         self.img_mask_pairs = self._load_img_mask_groups()
 
@@ -74,12 +75,16 @@ class CropResidueSegDataset(Dataset):
                     image_path = os.path.join(image_folder_path, file) # Result should be <root_path>/<dataset_name>/IMG_0629/IMG_0629_part01.jpg for example
 
                     # Identify corresponding .tif file
-                    mask_path = file.replace("_part", "_res_part", 1) # Should now be "IMG_0629_res_part0.jpg" for example
-                    mask_path = mask_path.replace(".jpg", ".tif")
-                    mask_path = os.path.join(image_folder_path, mask_path)
+                    if self.training:
+                        mask_path = file.replace("_part", "_res_part", 1) # Should now be "IMG_0629_res_part0.jpg" for example
+                        mask_path = mask_path.replace(".jpg", ".tif")
+                        mask_path = os.path.join(image_folder_path, mask_path)
 
-                    if os.path.exists(mask_path):
-                        groups.append((image_path, mask_path, img_transform))
+                        if os.path.exists(mask_path):
+                            groups.append((image_path, mask_path, img_transform))
+                    # If we aren't training, we don't need to look for a labeled .tif file.
+                    else:
+                        groups.append((image_path, None, img_transform))
         
         return groups
     
