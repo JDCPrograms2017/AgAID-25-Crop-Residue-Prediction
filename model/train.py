@@ -2,12 +2,14 @@ import torch
 import torch.nn as nn
 import os
 import torch.optim as optim
+import numpy as np
 from torch.utils.data import DataLoader
 from torchvision import models
 from torchvision.models.segmentation import deeplabv3_resnet101
 from utils import CropResidueSegDataset
 import multiprocessing
 import matplotlib.pyplot as plt
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 
 # Training function
 def train_model(model, dataloader, epochs=10):
@@ -17,11 +19,16 @@ def train_model(model, dataloader, epochs=10):
     optimizer = optim.AdamW(model.parameters(), lr=1e-4, weight_decay=1e-4)
 
     loss_history = [] # Indexed by Number of Epochs - 1
+    accuracy_history = []
+    predictions = []
+    labels = []
 
     print("Training the DeepLabV3+ Model\n-----------------------------")
     for epoch in range(epochs):
         model.train()
         total_loss = 0
+        correct_pixels = 0
+        total_pixels = 0
 
         for images, masks in dataloader:
             images, masks = images.to(device), masks.to(device)
@@ -38,16 +45,38 @@ def train_model(model, dataloader, epochs=10):
     
             total_loss += loss.item()
 
+            # Getting the intersection over union accuracy score.
+            predicted_pixels = torch.argmax(outputs, dim=1)
+            i = (predicted_pixels & masks).sum().float()
+            u = (predicted_pixels | masks).sum().float()
+            iou = i / u
+
+            correct_pixels += i.item()
+            total_pixels += u.item()
+
         avg_loss = total_loss / len(dataloader)
+        avg_iou = correct_pixels / total_pixels
+        predictions.append(predicted_pixels.cpu().numpy())
+        labels.append(masks.cpu().numpy())
         
-        loss_history.append(avg_loss)
-        print(f"Epoch {epoch+1}/{epochs}, Loss: {avg_loss:.4f}")
+        loss_history.append(avg_loss) # Avg loss over the whole data for this epoch.
+        accuracy_history.append(avg_iou) # Avg IoU over the whole data for this epoch.
+        print(f"Epoch {epoch+1}/{epochs}, Loss: {avg_loss:.4f}, Accuracy: {avg_iou:.4f}")
 
         # Save model checkpoint
         torch.save(model.state_dict(), f"../outputs/checkpoints/agaid2025_epoch{epoch+1}.pth")
 
     # Save the final instance of the trained model to an outputs folder specific to finished trainings.
     torch.save(model.state_dict(), f"../outputs/final/agaid2025_final.pth")
+
+    predictions = np.concatenate(predictions, axis=0).flatten()
+    labels = np.concatenate(labels, axis=0).flatten()
+
+    final_conf_matrix = confusion_matrix(predictions, labels, labels=[0, 1])
+    final_conf_display = ConfusionMatrixDisplay(confusion_matrix=final_conf_matrix, display_labels=["Soil/Dirt", "Crop Residue"])
+
+    final_conf_display.plot(cmap=plt.cm.Blues)
+    plt.savefig("../outputs/confusion_matrix.png")
 
     # Plot and export loss and accuracy models
     plt.figure(figsize=(10, 5))
@@ -80,7 +109,7 @@ if __name__ == '__main__':
     print("Model loaded!")
     
     # Train the model
-    train_model(model, dataset_loader, epochs=15)
+    train_model(model, dataset_loader, epochs=30)
 
     # model.eval()  # Set model to evaluation mode
     # with torch.no_grad():
