@@ -9,8 +9,8 @@ from PIL import Image
 def compute_mean_std(img_dataset):
     
     # Loading the images with parallel CPU cores.
-    desired_workers = max(1, multiprocessing.cpu_count() - 1)
-    loader = DataLoader(img_dataset, batch_size=16, num_workers=desired_workers) # Each image comes in a batch size of 16 segments.
+    desired_cores = min(4, multiprocessing.cpu_count() - 1)
+    loader = DataLoader(img_dataset, batch_size=16, num_workers=3) # Each image comes in a batch size of 16 segments.
 
     mean = torch.zeros(3)
     std = torch.zeros(3)
@@ -58,22 +58,18 @@ class CropResidueSegDataset(Dataset):
             dataset_dir_path = os.path.join(self.root_dir, dataset_dir)
             print(f"Dataset directory: {dataset_dir_path}")
 
+            # We need to make a new transform for this image as we will perform the transform/normalization based on parameters from each image.
+            img_transform = get_img_transform(dataset_dir_path)
+
             # We will loop through each IMG folder to extract the image filepath and the mask filepath.
             for img_dir in os.listdir(dataset_dir_path):
                 image_folder_path = os.path.join(dataset_dir_path, img_dir)
                 print(f"Image directory: {image_folder_path}")
 
-                # We need to make a new transform for this image as we will perform the transform/normalization based on parameters from each image.
-                img_transform = get_img_transform(image_folder_path)
-
                 # If the IMG folder exists, we will extract all of the .jpg images and see if we can pair them with their corresponding .tif files.
                 image_files = sorted([file for file in os.listdir(image_folder_path) if file.endswith('.jpg')])
 
                 for file in image_files:
-                    
-                    # We don't want to go over these image files as we've already located them.
-                    if file.endswith(".tif"):
-                        break
 
                     image_path = os.path.join(image_folder_path, file) # Result should be <root_path>/<dataset_name>/IMG_0629/IMG_0629_part01.jpg for example
 
@@ -95,6 +91,12 @@ class CropResidueSegDataset(Dataset):
     def __getitem__(self, index):
         img_path, mask_path, transform = self.img_mask_pairs[index]
 
+        if not os.path.exists(img_path):
+            print(f"Image file not found: {img_path}")
+
+        if not os.path.exists(mask_path):
+            print(f"Image file not found: {mask_path}")
+
         image = Image.open(img_path).convert("RGB")
         mask = Image.open(mask_path).convert("L")
 
@@ -102,7 +104,8 @@ class CropResidueSegDataset(Dataset):
         if transform:
             image = transform(image)
 
-        mask = transforms.ToTensor()(mask) # Convert the mask to a Tensor [0, 1]
+        mask = transforms.ToTensor()(mask).long() # Convert the mask to a Tensor [0, 1]
+        print(f"Image Tensor: {image}\tMask Tensor: {mask}")
 
         return image, mask # Return the Tensors
 
