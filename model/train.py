@@ -9,7 +9,7 @@ import multiprocessing
 # Set device (GPU if available)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-img_data_path = "../images_512/label/residue_background"
+img_data_path = "images_512\label\\residue_background"
 
 dataset = CropResidueSegDataset(img_data_path)
 
