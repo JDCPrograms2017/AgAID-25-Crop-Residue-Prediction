@@ -1,32 +1,44 @@
+import os
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import multiprocessing
 from torch.utils.data import DataLoader
 from torchvision.models.segmentation import deeplabv3_resnet101
-from utils import CropResidueSegDataset
-import multiprocessing
+from dataset import CropResidueDataset  # Ensure correct import
 
 # Set device (GPU if available)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-img_data_path = "images_512\label\\residue_background"
+# === FIXED: Get the correct absolute path to images_512 ===
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # Get project root
+img_data_path = os.path.join(BASE_DIR, "images_512", "original")  # Correct path for images
+mask_data_path = os.path.join(BASE_DIR, "images_512", "label")    # Correct path for masks
 
-dataset = CropResidueSegDataset(img_data_path)
+# Ensure paths exist before running
+if not os.path.exists(img_data_path) or not os.path.exists(mask_data_path):
+    raise FileNotFoundError(f"❌ Dataset folders not found! Check paths:\n{img_data_path}\n{mask_data_path}")
 
-desired_workers = max(1, multiprocessing.cpu_count() - 1)
-dataset_loader = DataLoader(dataset, batch_size=16, shuffle=True, num_workers=4)
+# === Load Dataset ===
+dataset = CropResidueDataset(img_data_path, mask_data_path)  # Pass both arguments
+desired_workers = max(1, multiprocessing.cpu_count() - 1)  # Dynamically assign workers
+dataset_loader = DataLoader(dataset, batch_size=16, shuffle=True, num_workers=desired_workers)
 
-# Load DeepLabV3 model
+# === Load DeepLabV3 Model ===
 model = deeplabv3_resnet101(pretrained=True)
 model.classifier[4] = nn.Conv2d(256, 2, kernel_size=(1,1))  # 2 classes: soil vs crop residue
 model = model.to(device)
 
-# Loss function and optimizer
+# === Define Loss Function & Optimizer ===
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.AdamW(model.parameters(), lr=1e-4, weight_decay=1e-4)
 
-# Training function
+# === Training Function ===
 def train_model(model, dataloader, epochs=10):
+    best_loss = float("inf")
+    checkpoint_dir = os.path.join(BASE_DIR, "outputs", "checkpoints")
+    os.makedirs(checkpoint_dir, exist_ok=True)  # Ensure checkpoint directory exists
+
     for epoch in range(epochs):
         model.train()
         total_loss = 0
@@ -45,8 +57,11 @@ def train_model(model, dataloader, epochs=10):
         avg_loss = total_loss / len(dataloader)
         print(f"Epoch {epoch+1}/{epochs}, Loss: {avg_loss:.4f}")
 
-        # Save model checkpoint
-        torch.save(model.state_dict(), f"../outputs/checkpoints/deeplab_epoch{epoch+1}.pth")
+        # Save best model (only if loss improves)
+        if avg_loss < best_loss:
+            best_loss = avg_loss
+            torch.save(model.state_dict(), os.path.join(checkpoint_dir, "best_deeplabv3.pth"))
+            print(f"✅ Saved best model (Epoch {epoch+1})")
 
-# Train the model
+# === Train the Model ===
 train_model(model, dataset_loader, epochs=10)
