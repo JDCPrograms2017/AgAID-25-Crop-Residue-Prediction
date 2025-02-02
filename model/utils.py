@@ -104,7 +104,7 @@ class CropResidueSegDataset(Dataset):
         if transform:
             image = transform(image)
 
-        mask = transforms.ToTensor()(mask).long() # Convert the mask to a Tensor [0, 1]
+        mask = transforms.ToTensor()(mask).long() # Convert the mask to a Tensor [0, 1]; Squeezes the 4D tensor into a 3D tensor (removes the 1 channel dimension)
         print(f"Image Tensor: {image}\tMask Tensor: {mask}")
 
         return image, mask # Return the Tensors

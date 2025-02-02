@@ -1,3 +1,4 @@
 ./myenvv
 AgAID_2025
 *.swp
+__pycache__/

@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import os
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from torchvision import models
@@ -26,6 +27,8 @@ def train_model(model, dataloader, epochs=10):
 
             outputs = model(images)["out"] # Model freezes here in training mode...
 
+            masks = masks.squeeze(1)
+
             print(f"Output shape: {outputs.shape}, Mask shape: {masks.shape}")
             loss = criterion(outputs, masks)
             loss.backward()
@@ -45,7 +48,8 @@ if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Device being used: {device}")
 
-    img_data_path = "images_512\label\\residue_background"
+    path_vars = ["images_512", "label", "residue_background"]
+    img_data_path = os.path.join(path_vars[0], path_vars[1], path_vars[2]) # A more OS-independent way to make the path.
 
     dataset = CropResidueSegDataset(img_data_path)
     print(f"Dataset loaded! Size: {len(dataset)}")
