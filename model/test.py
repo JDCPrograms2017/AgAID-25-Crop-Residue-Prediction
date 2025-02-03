@@ -12,14 +12,14 @@ import os
 from utils import CropResidueSegDataset
 
 if __name__ == "__main__":
-    test1 = CropResidueSegDataset("../test", False)
+    test1 = CropResidueSegDataset("/scratch/project/hackathon/data/CropResiduePredictionChallenge/test/", False)
     dataset_loader = DataLoader(test1, batch_size=16, shuffle=True, num_workers=4)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     model = deeplabv3_resnet101(weights=None)
     model.classifier[4] = torch.nn.Conv2d(256,2, kernel_size=(1,1))
 
-    checkpoint = torch.load("../agaid2025_final.pth", map_location=device)
+    checkpoint = torch.load("/home/joshua.chadwick/outputs/final/agaid2025_final.pth", map_location=device)
     model.load_state_dict(checkpoint, strict=False)
 
     model.to(device)

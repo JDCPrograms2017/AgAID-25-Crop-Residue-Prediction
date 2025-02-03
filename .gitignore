@@ -2,3 +2,5 @@
 AgAID_2025
 *.swp
 __pycache__/
+*.DS_Store
+test/

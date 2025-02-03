@@ -109,7 +109,7 @@ if __name__ == '__main__':
     print("Model loaded!")
     
     # Train the model
-    train_model(model, dataset_loader, epochs=30)
+    train_model(model, dataset_loader, epochs=50)
 
     # model.eval()  # Set model to evaluation mode
     # with torch.no_grad():
